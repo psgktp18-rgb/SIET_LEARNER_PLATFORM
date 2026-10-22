@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getUser } from '@/lib/auth';
 import { calculateClassroomHealth } from '@/lib/classroom-health';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getUser();

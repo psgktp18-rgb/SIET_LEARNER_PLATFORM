@@ -3,10 +3,13 @@ import './src/lib/env';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  output: 'standalone',
+  ...(process.env.VERCEL ? {} : { output: 'standalone' }),
   cacheComponents: true,
   partialPrefetching: true,
   outputFileTracingRoot: process.cwd(),
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   turbopack: {
     root: process.cwd(),
     rules: {

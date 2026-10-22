@@ -340,7 +340,46 @@ npm run worker
 
 ---
 
-## 6. Running with Docker
+---
+
+## 6. Deploying to Vercel
+
+The platform is fully optimized for one-click deployment to [Vercel](https://vercel.com):
+
+### Step 1: Import Repository
+1. Log in to [Vercel Dashboard](https://vercel.com/dashboard).
+2. Click **Add New...** → **Project**.
+3. Select `SIET_LEARNER_PLATFORM` from your GitHub repositories and click **Import**.
+
+### Step 2: Configure Environment Variables
+In the Vercel project configuration screen under **Environment Variables**, add the following:
+
+| Variable | Recommended Value / Format | Purpose |
+|---|---|---|
+| `DATABASE_URL` | `postgresql://user:pass@host/db?sslmode=require&pgbouncer=true` | Neon / Supabase PostgreSQL connection pooler |
+| `JWT_SECRET` | Super secure random string (at least 32 characters) | Session cookie cryptographic signing |
+| `ENCRYPTION_KEY` | `secret_encryption_key_for_dev_only` | Storage and payload encryption |
+| `APP_URL` | `https://your-project.vercel.app` | Production canonical URL |
+| `NODE_ENV` | `production` | Production environment flag |
+| `AI_PRIMARY` | `gemini` | Cloud AI provider (since Ollama is local) |
+| `AI_FALLBACK` | `none` | Fallback mode on serverless |
+| `GEMINI_API_KEY` | Your Google Gemini API Key | Cloud AI inference for tutor & quiz generation |
+| `GEMINI_MODEL` | `gemini-1.5-flash` | High-speed Gemini model |
+
+> **Database Tip for Serverless**: If using [Neon.tech](https://neon.tech), use the **Pooled connection string** (`-pooler` in host) with `?sslmode=require&pgbouncer=true` to prevent PostgreSQL connection exhaustion during traffic spikes.
+
+### Step 3: Deploy & Initialize Database
+1. Click **Deploy**. Vercel will install dependencies, automatically execute `postinstall: prisma generate`, and compile the application.
+2. Push your schema and seed initial accounts from your local terminal pointing to your cloud database:
+   ```bash
+   # Point to your production database URL
+   DATABASE_URL="postgresql://user:pass@host/db?sslmode=require" npx prisma db push
+   DATABASE_URL="postgresql://user:pass@host/db?sslmode=require" npx tsx prisma/seed.ts
+   ```
+
+---
+
+## 7. Running with Docker
 
 To spin up the application along with PostgreSQL and Ollama in containers:
 

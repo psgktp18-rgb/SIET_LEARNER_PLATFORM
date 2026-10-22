@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postinstall": "prisma generate",
     "start": "cross-env UV_THREADPOOL_SIZE=8 next start",
     "lint": "eslint",
     "test": "tsx src/lib/phase3.test.ts && tsx src/lib/phase4.test.ts",
