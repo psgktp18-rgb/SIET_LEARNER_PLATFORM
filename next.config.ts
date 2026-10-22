@@ -7,9 +7,6 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   outputFileTracingRoot: process.cwd(),
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   turbopack: {
     root: process.cwd(),
     rules: {

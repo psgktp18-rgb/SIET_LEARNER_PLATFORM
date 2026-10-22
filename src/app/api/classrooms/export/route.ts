@@ -1,11 +1,10 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse, NextRequest, connection } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUser } from '@/lib/auth';
 import { calculateClassroomHealth } from '@/lib/classroom-health';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET(req: NextRequest) {
+  await connection();
   try {
     const user = await getUser();
     if (!user || user.role === 'STUDENT') {
