@@ -60,29 +60,29 @@ Traditional learning management platforms are static repositories of files. **SI
 
 ```mermaid
 graph TD
-    subgraph Client ["Client Layer (Web / Mobile Browser)"]
+    subgraph Client ["Client Layer - Web / Mobile"]
         S_UI["Student Portal (/student)"]
         T_UI["Teacher Portal (/teacher)"]
         H_UI["HOD Portal (/hod)"]
         A_UI["Admin Portal (/admin)"]
     end
 
-    subgraph Edge ["Routing & Security (Next.js)"]
-        Proxy["Proxy & Edge Guards (src/proxy.ts)"]
-        Auth["JWT Cookie Validator (Stateless jose)"]
-        RateLimit["In-Memory Rate Limiter & Lockout Map"]
+    subgraph Edge ["Routing and Security - Next.js"]
+        Proxy["Proxy & Edge Guards"]
+        Auth["JWT Cookie Validator (Stateless)"]
+        RateLimit["Rate Limiter & Lockout Map"]
     end
 
     subgraph ServerApp ["Next.js App Server (Node.js runtime)"]
-        AppRouter["Next.js 16 App Router (59+ Role Routes)"]
+        AppRouter["App Router (59+ Role Routes)"]
         SSE["Real-Time SSE Hub (/api/realtime)"]
         APIs["API Routes (/api/student, /api/teacher, /api/tests)"]
     end
 
-    subgraph AIRouter ["AI Orchestration Layer (src/lib/ai)"]
+    subgraph AIRouter ["AI Orchestration Layer"]
         AIRoute["Provider Router"]
-        OllamaLocal["Ollama Local LLM (qwen2.5:7b / nomic-embed)"]
-        GeminiCloud["Google Gemini 1.5 Flash (Fallback / Cloud)"]
+        OllamaLocal["Ollama Local LLM (qwen2.5:7b)"]
+        GeminiCloud["Google Gemini 1.5 Flash"]
     end
 
     subgraph WorkerService ["Background Queue & Workers"]
@@ -93,8 +93,8 @@ graph TD
 
     subgraph DataLayer ["Data & Storage Layer"]
         PrismaORM["Prisma ORM Client"]
-        PostgresDB[("PostgreSQL Database (Neon / Cloud / Local)")]
-        FileStore["File Upload Storage (Local / Cloud)"]
+        PostgresDB[("PostgreSQL Database")]
+        FileStore["File Upload Storage"]
     end
 
     Client --> Edge
@@ -105,9 +105,9 @@ graph TD
     WorkerService --> AIRouter
     WorkerService --> PrismaORM
     PrismaORM --> PostgresDB
-    AIRoute -->|Primary (Low Latency)| OllamaLocal
-    AIRoute -->|Fallback (Offline/Error)| GeminiCloud
-    ServerApp -->|Real-time Events| SSE
+    AIRoute -->|"Primary: Fast Local"| OllamaLocal
+    AIRoute -->|"Fallback: Cloud AI"| GeminiCloud
+    ServerApp -->|"Real-time Events"| SSE
     SSE -.-> Client
 ```
 
@@ -145,14 +145,14 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    A[AI Request: Doubt / Quiz / Summary] --> B[AI Router: src/lib/ai/index.ts]
-    B --> C{Is Ollama Available?}
-    C -->|Yes: Within 30s Timeout| D[Ollama Local Engine]
-    D --> E[Generate Embeddings & Answers]
-    C -->|No / Timeout / Error| F{Is Gemini Key Configured?}
-    F -->|Yes| G[Google Gemini 1.5 Flash]
-    F -->|No| H[Deterministic Mock / Graceful Fallback]
-    E --> I[Return Response to Client]
+    A["AI Request: Doubt / Quiz / Summary"] --> B["AI Router: src/lib/ai"]
+    B --> C{"Is Ollama Available?"}
+    C -->|"Yes: Within 30s"| D["Ollama Local Engine"]
+    D --> E["Generate Embeddings & Answers"]
+    C -->|"No / Timeout / Error"| F{"Is Gemini Key Configured?"}
+    F -->|"Yes"| G["Google Gemini 1.5 Flash"]
+    F -->|"No"| H["Deterministic Mock Fallback"]
+    E --> I["Return Response to Client"]
     G --> I
     H --> I
 ```

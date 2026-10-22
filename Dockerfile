@@ -17,8 +17,8 @@ COPY . .
 
 # Environment variables for build time
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_URL="file:./dev.db" 
-# (Dummy DB URL to satisfy Prisma generation during build)
+ENV DATABASE_URL="postgresql://postgres:password@localhost:5432/build_db?schema=public"
+ENV JWT_SECRET="build_jwt_secret_must_be_at_least_32_characters_long"
 
 RUN npx prisma generate
 RUN npm run build
