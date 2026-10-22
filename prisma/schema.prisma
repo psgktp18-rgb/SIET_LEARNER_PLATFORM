@@ -1,0 +1,944 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  role               String // "STUDENT", "TEACHER", "ADMIN", "HOD"
+  loginId            String    @unique
+  name               String
+  email              String?   @unique
+  phone              String?
+  departmentId       String?
+  year               Int?
+  section            String?
+  passwordHash       String
+  mustChangePassword Boolean   @default(false)
+  isActive           Boolean   @default(true)
+  isBlocked          Boolean   @default(false)
+  isHod              Boolean   @default(false)
+  blockedBy          String?
+  blockReason        String?
+  avatar             String?
+  mentorId           String?
+  wantsStudyBuddy    Boolean   @default(false)
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  department  Department?  @relation(fields: [departmentId], references: [id])
+  departments Department[] @relation("TeacherDepartments")
+  mentor      User?        @relation("StudentMentor", fields: [mentorId], references: [id])
+  mentees     User[]       @relation("StudentMentor")
+
+  // Relations
+  classroomsTeaching Classroom[]             @relation("TeacherClassrooms")
+  enrollments        Enrollment[]
+  announcements      Announcement[]
+  auditLogs          AuditLog[]
+  passwordResets     PasswordResetRequest[]
+  notifications      Notification[]
+  notesUploaded      Note[]
+  quizzesCreated     Quiz[]
+  flashcardsCreated  Flashcard[]
+  assignmentsCreated Assignment[]
+  submissions        Submission[]
+  testsCreated       Test[]
+  testAttempts       TestAttempt[]
+  doubtTickets       DoubtTicket[]
+  meetingsCreated    Meeting[]
+  attendances        Attendance[]
+  badges             UserBadge[]
+  points             PointLedger[]
+  studyPlans         StudyPlan[]
+  doubtWallPosts     DoubtWallPost[]
+  doubtWallReplies   DoubtWallReply[]
+  marks              StudentMark[]
+  finalisedMarks     FinalisedSubjectMarks[]
+  mentoringNotes     MentoringNote[]         @relation("MentorNotes")
+  studentNotes       MentoringNote[]         @relation("StudentNotes")
+  trackProgresses    TrackProgress[]
+  notices            Notice[]
+  qrSessions         QrAttendanceSession[]
+  files              FileRecord[]
+  aiGenerations      AiGeneration[]
+  aiConversations    AiConversation[]
+  studyDocuments     StudyDocument[]
+
+  classroomTeachers          ClassroomTeacher[]
+  classRepClassrooms         Classroom[]             @relation("ClassRepresentative")
+  createdClassrooms          Classroom[]             @relation("ClassroomCreatedBy")
+  classroomJoinRequests      ClassroomJoinRequest[]
+  requestedClassroomRequests ClassroomRequest[]      @relation("ClassroomRequestRequester")
+  proposedClassroomRequests  ClassroomRequest[]      @relation("ClassroomRequestProposedTeacher")
+
+  @@index([role])
+  @@index([departmentId])
+  @@index([isBlocked])
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique // e.g., CSE, ECE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users             User[]
+  teachers          User[]             @relation("TeacherDepartments")
+  classrooms        Classroom[]
+  skillTracks       SkillTrack[]
+  notices           Notice[]
+  classroomRequests ClassroomRequest[]
+}
+
+model Subject {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  credits   Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  classrooms     Classroom[]
+  marksSchemes   SubjectMarksScheme[]
+  finalisedMarks FinalisedSubjectMarks[]
+}
+
+model Classroom {
+  id               String   @id @default(cuid())
+  name             String
+  subjectId        String
+  departmentId     String
+  year             Int
+  section          String
+  joinCode         String   @unique
+  teacherId        String
+  bannerColor      String   @default("#004d00")
+  isArchived       Boolean  @default(false)
+  type             String   @default("OFFICIAL") // OFFICIAL, EXTRA
+  category         String?  // REMEDIAL, LAB_BATCH, REVISION, PROJECT_GROUP
+  requiresApproval Boolean  @default(false)
+  createdById      String?
+  classRepId       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  subject    Subject     @relation(fields: [subjectId], references: [id])
+  department Department  @relation(fields: [departmentId], references: [id])
+  teacher    User        @relation("TeacherClassrooms", fields: [teacherId], references: [id])
+  createdBy  User?       @relation("ClassroomCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  classRep   User?       @relation("ClassRepresentative", fields: [classRepId], references: [id], onDelete: SetNull)
+
+  teachers          ClassroomTeacher[]
+  joinRequests      ClassroomJoinRequest[]
+  classroomRequests ClassroomRequest[]
+  enrollments       Enrollment[]
+  announcements     Announcement[]
+  notes             Note[]
+  quizzes           Quiz[]
+  assignments       Assignment[]
+  tests             Test[]
+  doubtTickets      DoubtTicket[]
+  meetings          Meeting[]
+  doubtWallPosts    DoubtWallPost[]
+  marks             StudentMark[]
+  finalisedMarks    FinalisedSubjectMarks[]
+  feedbacks         CourseFeedback[]
+  qrSessions        QrAttendanceSession[]
+  files             FileRecord[]
+  aiConversations   AiConversation[]
+}
+
+model Enrollment {
+  id          String   @id @default(cuid())
+  userId      String
+  classroomId String
+  joinedAt    DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, classroomId])
+}
+
+model Announcement {
+  id             String   @id @default(cuid())
+  title          String
+  content        String
+  authorId       String
+  classroomId    String? // If null, it's a global or department-wide announcement
+  departmentId   String? // Used if classroomId is null to target a department
+  year           Int? // Used if classroomId is null to target a year
+  isFromClassRep Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  author    User       @relation(fields: [authorId], references: [id])
+  classroom Classroom? @relation(fields: [classroomId], references: [id])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  actorRole    String?
+  actorLabel   String?
+  targetUserId String?
+  action       String
+  details      String?
+  createdAt    DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model SystemSetting {
+  id                  String  @id @default(cuid())
+  collegeName         String  @default("Sri Shakthi Institute of Engineering and Technology")
+  logoUrl             String?
+  academicYear        String  @default("2023-2024")
+  semester            Int     @default(5)
+  themePrimaryColor   String  @default("#004d00")
+  themeSecondaryColor String  @default("#F7E135")
+  allowSelfReg        Boolean @default(false)
+  maxUploadSizeMB     Int     @default(10)
+  allowedFileTypes    String  @default("pdf,doc,docx,jpg,png")
+  meetServerUrl       String?
+  examMode            Boolean @default(false)
+  enabledYears        String  @default("[3]") // JSON array of enabled years
+
+  // AI Settings
+  aiPrimaryProvider  String  @default("ollama")
+  aiFallbackProvider String  @default("gemini")
+  aiMasterSwitch     Boolean @default(true)
+  aiTimeoutMs        Int     @default(30000)
+  ollamaBaseUrl      String  @default("http://localhost:11434")
+  ollamaChatModel    String  @default("qwen2.5:7b-instruct")
+  ollamaEmbedModel   String  @default("nomic-embed-text")
+  geminiModel        String  @default("gemini-1.5-flash")
+
+  // Task specific fallbacks - JSON string boolean map
+  taskFallbacks String @default("{\"quizGeneration\":true,\"flashcardGeneration\":true,\"revisionTools\":true,\"classInsights\":true,\"studyDoubtBot\":true,\"platformHelpBot\":true,\"assignmentFeedback\":false,\"shortAnswerGrading\":false}")
+
+  // Phase 4C Toggles
+  enableTamilAI             Boolean @default(false)
+  enableAttendancePredictor Boolean @default(true)
+  attendanceThreshold       Int     @default(75)
+  enableEarlyWarning        Boolean @default(true)
+  enablePlacementTracks     Boolean @default(true)
+  judge0ServerUrl           String?
+  enableStudyBuddy          Boolean @default(false)
+  enableLastNightRevision   Boolean @default(true)
+  enableNoticeBoard         Boolean @default(true)
+  enableCourseFeedback      Boolean @default(true)
+  enableQrAttendance        Boolean @default(true)
+
+  // Security / Classroom creation settings
+  classroomCreationRule     String  @default("ADMIN_HOD_TEACHER") // ADMIN_ONLY, ADMIN_HOD, ADMIN_HOD_TEACHER
+
+  // AI Feature switches & Daily Quota
+  aiDailyQuotaPerUser       Int     @default(50)
+  aiTeacherStudioEnabled    Boolean @default(true)
+  aiStudentTutorEnabled     Boolean @default(true)
+  aiHodInsightsEnabled      Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}
+
+model PasswordResetRequest {
+  id         String    @id @default(cuid())
+  userId     String
+  status     String    @default("PENDING") // PENDING, RESOLVED
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ----------------------------------------------------------------------
+// PHASE 2 MODELS
+// ----------------------------------------------------------------------
+
+model Note {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  fileUrl     String
+  fileType    String
+  classroomId String
+  uploaderId  String
+  unit        String?
+  status      String   @default("PROCESSING") // PROCESSING, READY, FAILED
+  error       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  classroom Classroom   @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  uploader  User        @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  chunks    NoteChunk[]
+  questions Question[]
+}
+
+model NoteChunk {
+  id             String   @id @default(cuid())
+  noteId         String
+  content        String
+  pageNumber     Int?
+  embedding      String? // JSON stringified array of floats
+  embedProvider  String?
+  embedModel     String?
+  embedDimension Int?
+  createdAt      DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  noteId        String
+  type          String // MCQ, TRUE_FALSE, FILL_BLANK, SHORT_ANSWER
+  difficulty    String // EASY, MEDIUM, HARD
+  text          String
+  options       String? // JSON array for MCQ
+  correctAnswer String
+  explanation   String?
+  topicTag      String?
+  pageNumber    Int?
+  importance    Float    @default(1.0)
+  status        String   @default("DRAFT") // DRAFT, APPROVED
+  createdAt     DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
+
+model Quiz {
+  id          String   @id @default(cuid())
+  title       String
+  classroomId String
+  creatorId   String
+  createdAt   DateTime @default(now())
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  creator   User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+}
+
+model Attempt {
+  id        String   @id @default(cuid())
+  score     Int
+  createdAt DateTime @default(now())
+}
+
+model Flashcard {
+  id          String   @id @default(cuid())
+  noteId      String?
+  front       String
+  back        String
+  type        String // TERM, CONCEPT, FORMULA
+  creatorId   String
+  nextReview  DateTime @default(now())
+  interval    Int      @default(0)
+  ease        Float    @default(2.5)
+  repetitions Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+}
+
+model AiUsageLog {
+  id               String   @id @default(cuid())
+  userId           String?
+  timestamp        DateTime @default(now())
+  taskType         String
+  provider         String
+  model            String
+  latencyMs        Int
+  success          Boolean
+  fallbackUsed     Boolean
+  promptTokens     Int?
+  completionTokens Int?
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
+// ----------------------------------------------------------------------
+// PLACEHOLDER TABLES FOR LATER PHASES
+// ----------------------------------------------------------------------
+
+model Assignment {
+  id           String   @id @default(cuid())
+  title        String
+  instructions String
+  attachments  String?
+  dueDate      DateTime
+  maxMarks     Int      @default(100)
+  allowLate    Boolean  @default(false)
+  latePenalty  Float    @default(0)
+  rubric       String?
+  aiHelpRule   String   @default("OFF") // OFF, HINTS_ONLY, ALLOWED
+  classroomId  String
+  teacherId    String
+  createdAt    DateTime @default(now())
+
+  classroom   Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacher     User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+}
+
+model Submission {
+  id           String   @id @default(cuid())
+  assignmentId String
+  studentId    String
+  textContent  String?
+  files        String?
+  status       String   @default("SUBMITTED") // SUBMITTED, LATE, GRADED
+  submittedAt  DateTime @default(now())
+  marks        Float?
+  feedback     String?
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+}
+
+model Test {
+  id               String   @id @default(cuid())
+  title            String
+  classroomId      String
+  teacherId        String
+  durationMins     Int
+  startTime        DateTime
+  endTime          DateTime
+  marksPerQuestion Float    @default(1.0)
+  negativeMarking  Float    @default(0.0)
+  randomize        Boolean  @default(false)
+  allAtOnce        Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  classroom Classroom      @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacher   User           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  questions TestQuestion[]
+  attempts  TestAttempt[]
+}
+
+model TestQuestion {
+  id         String @id @default(cuid())
+  testId     String
+  questionId String
+  orderIndex Int    @default(0)
+
+  test Test @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@unique([testId, questionId])
+}
+
+model TestAttempt {
+  id         String    @id @default(cuid())
+  testId     String
+  studentId  String
+  startTime  DateTime  @default(now())
+  endTime    DateTime?
+  status     String    @default("IN_PROGRESS") // IN_PROGRESS, SUBMITTED, AUTO_SUBMITTED
+  violations Int       @default(0)
+  score      Float?
+  createdAt  DateTime  @default(now())
+
+  test    Test         @relation(fields: [testId], references: [id], onDelete: Cascade)
+  student User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  answers TestAnswer[]
+
+  @@unique([testId, studentId])
+}
+
+model TestAnswer {
+  id         String   @id @default(cuid())
+  attemptId  String
+  questionId String
+  answer     String
+  isCorrect  Boolean?
+  marks      Float?
+
+  attempt TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+}
+
+model DoubtTicket {
+  id           String   @id @default(cuid())
+  classroomId  String
+  studentId    String
+  question     String
+  botContext   String?
+  status       String   @default("OPEN") // OPEN, RESOLVED
+  teacherReply String?
+  isCommon     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------------------------------------------------------
+// PLACEHOLDER TABLES FOR LATER PHASES
+// ----------------------------------------------------------------------
+
+model Meeting {
+  id           String   @id @default(cuid())
+  title        String
+  classroomId  String
+  teacherId    String
+  scheduledFor DateTime
+  isInstant    Boolean  @default(false)
+  status       String   @default("SCHEDULED") // SCHEDULED, LIVE, COMPLETED
+  roomName     String   @unique
+  summary      String?
+  createdAt    DateTime @default(now())
+
+  classroom   Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacher     User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  attendances Attendance[]
+
+  @@index([classroomId])
+  @@index([status])
+}
+
+model Attendance {
+  id           String    @id @default(cuid())
+  meetingId    String
+  studentId    String
+  joinTime     DateTime  @default(now())
+  leaveTime    DateTime?
+  durationMins Int       @default(0)
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  student User    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, studentId])
+  @@index([studentId])
+}
+
+model Badge {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  iconUrl     String?
+  createdAt   DateTime @default(now())
+
+  userBadges UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model PointLedger {
+  id        String   @id @default(cuid())
+  userId    String
+  points    Int
+  reason    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Exam {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  createdAt   DateTime @default(now())
+
+  studyPlans StudyPlan[]
+}
+
+model StudyPlan {
+  id         String   @id @default(cuid())
+  studentId  String
+  examId     String
+  dailyHours Int
+  planData   String // JSON containing the day-by-day plan
+  createdAt  DateTime @default(now())
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  exam    Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, examId])
+}
+
+model DoubtWallPost {
+  id          String   @id @default(cuid())
+  classroomId String
+  studentId   String
+  title       String
+  content     String
+  upvotes     Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  classroom Classroom        @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  student   User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  replies   DoubtWallReply[]
+}
+
+model DoubtWallReply {
+  id         String   @id @default(cuid())
+  postId     String
+  authorId   String
+  content    String
+  isAi       Boolean  @default(false)
+  isAccepted Boolean  @default(false)
+  upvotes    Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  post   DoubtWallPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+// ----------------------------------------------------------------------
+// PHASE 4B: MARKS AND PERFORMANCE
+// ----------------------------------------------------------------------
+
+model SubjectMarksScheme {
+  id            String   @id @default(cuid())
+  subjectId     String   @unique
+  totalMaxMarks Int      @default(100)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  subject    Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  components MarkComponent[]
+}
+
+model MarkComponent {
+  id        String   @id @default(cuid())
+  schemeId  String
+  name      String
+  maxMarks  Float
+  weightage Float
+  createdAt DateTime @default(now())
+
+  scheme SubjectMarksScheme @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+  marks  StudentMark[]
+}
+
+model StudentMark {
+  id          String   @id @default(cuid())
+  componentId String
+  studentId   String
+  classroomId String
+  marks       Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  component MarkComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  student   User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classroom Classroom     @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@unique([componentId, studentId, classroomId])
+  @@index([classroomId])
+  @@index([studentId])
+}
+
+model FinalisedSubjectMarks {
+  id          String    @id @default(cuid())
+  subjectId   String
+  classroomId String
+  teacherId   String
+  isLocked    Boolean   @default(false)
+  lockedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  subject   Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacher   User      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, classroomId])
+}
+
+// ----------------------------------------------------------------------
+// PHASE 4C: SIET SPECIFIC FEATURES
+// ----------------------------------------------------------------------
+
+model MentoringNote {
+  id        String   @id @default(cuid())
+  studentId String
+  mentorId  String
+  notes     String
+  createdAt DateTime @default(now())
+
+  student User @relation("StudentNotes", fields: [studentId], references: [id], onDelete: Cascade)
+  mentor  User @relation("MentorNotes", fields: [mentorId], references: [id], onDelete: Cascade)
+}
+
+model SkillTrack {
+  id           String   @id @default(cuid())
+  departmentId String?
+  name         String
+  description  String?
+  createdAt    DateTime @default(now())
+
+  department Department?     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  questions  TrackQuestion[]
+  progresses TrackProgress[]
+}
+
+model TrackQuestion {
+  id        String   @id @default(cuid())
+  trackId   String
+  type      String // MCQ, CODE
+  text      String
+  options   String? // JSON for MCQ
+  answer    String // Correct option or expected output
+  createdAt DateTime @default(now())
+
+  track SkillTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+}
+
+model TrackProgress {
+  id              String   @id @default(cuid())
+  userId          String
+  trackId         String
+  score           Int      @default(0)
+  topicsCompleted Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track SkillTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trackId])
+}
+
+model CourseFeedback {
+  id           String   @id @default(cuid())
+  classroomId  String
+  comment      String
+  rating       Int
+  isAggregated Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+}
+
+model QrAttendanceSession {
+  id              String    @id @default(cuid())
+  classroomId     String
+  teacherId       String
+  currentQrCode   String    @unique
+  qrCodeExpiresAt DateTime
+  startTime       DateTime  @default(now())
+  endTime         DateTime?
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacher   User      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+}
+
+model Notice {
+  id               String    @id @default(cuid())
+  title            String
+  content          String
+  departmentId     String?
+  year             Int?
+  authorId         String
+  eventDate        DateTime?
+  registrationLink String?
+  createdAt        DateTime  @default(now())
+
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  author     User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id        String   @id @default(cuid())
+  type      String
+  payload   String // JSON string
+  status    String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  attempts  Int      @default(0)
+  error     String?
+  runAt     DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FileRecord {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  size        Int
+  type        String
+  checksum    String?
+  purpose     String
+  ownerId     String
+  classroomId String?
+  createdAt   DateTime @default(now())
+
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  classroom Classroom? @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+}
+
+model IdempotencyKey {
+  key       String   @id
+  userId    String
+  path      String
+  response  String? // JSON stringified
+  createdAt DateTime @default(now())
+}
+
+model ClassroomTeacher {
+  id          String    @id @default(cuid())
+  classroomId String
+  teacherId   String
+  role        String    // "CO_TEACHER", "SUBSTITUTE"
+  startDate   DateTime  @default(now())
+  endDate     DateTime? // Temporary access expiry date for SUBSTITUTE
+  createdAt   DateTime  @default(now())
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacher   User      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, teacherId, role])
+  @@index([classroomId])
+  @@index([teacherId])
+}
+
+model ClassroomJoinRequest {
+  id          String   @id @default(cuid())
+  classroomId String
+  studentId   String
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classroomId, studentId])
+  @@index([classroomId])
+  @@index([studentId])
+}
+
+model ClassroomRequest {
+  id                String    @id @default(cuid())
+  type              String    // "CREATE_OFFICIAL", "CHANGE_TEACHER"
+  departmentId      String
+  requesterId       String
+  classroomId       String?   // For teacher change
+  subjectId         String?   // For new classroom
+  year              Int?
+  section           String?
+  proposedTeacherId String?
+  name              String?
+  reason            String?
+  status            String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  adminComment      String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  department      Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  requester       User       @relation("ClassroomRequestRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  proposedTeacher User?      @relation("ClassroomRequestProposedTeacher", fields: [proposedTeacherId], references: [id], onDelete: SetNull)
+  classroom       Classroom? @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@index([departmentId])
+  @@index([status])
+}
+
+model AiGeneration {
+  id        String   @id @default(cuid())
+  userId    String
+  tool      String   // "LESSON_PLAN", "QUESTION_PAPER", "QUIZ", "RUBRIC", "VIVA", "CODE_EXPLAIN", "SUMMARY", "GLOSSARY", "CLASS_INSIGHT", "MEET_SUMMARY", etc.
+  title     String
+  content   String
+  metadata  String?  // JSON stringified inputs / parameters
+  rating    String?  // "THUMBS_UP", "THUMBS_DOWN"
+  tags      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tool])
+  @@index([createdAt])
+}
+
+model AiConversation {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  mode        String   @default("SIMPLE") // "SIMPLE", "STEP_BY_STEP", "EXAMPLE", "ANALOGY", "SOCRATIC", "TAMIL", "TANGLISH", "CODE"
+  classroomId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classroom Classroom?  @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  messages  AiMessage[]
+
+  @@index([userId])
+  @@index([classroomId])
+}
+
+model AiMessage {
+  id                 String   @id @default(cuid())
+  conversationId     String
+  role               String   // "user", "assistant", "system"
+  content            String
+  citations          String?  // JSON array of note citations
+  isGeneralKnowledge Boolean  @default(false)
+  rating             String?  // "THUMBS_UP", "THUMBS_DOWN"
+  createdAt          DateTime @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+}
+
+model StudyDocument {
+  id           String   @id @default(cuid())
+  studentId    String
+  title        String
+  content      String   // Extracted or pasted notes text
+  fileUrl      String?
+  fileType     String?
+  summary      String?
+  mindMap      String?  // Markdown / JSON outline
+  flashcards   String?  // JSON array
+  practiceQuiz String?  // JSON array
+  keyTerms     String?  // JSON array / markdown
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+}
+

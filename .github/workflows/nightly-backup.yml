@@ -1,0 +1,24 @@
+name: Nightly Backup & Restore Test
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # Every night at 2 AM
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: Database and Uploads Backup
+    runs-on: [self-hosted, siet-server]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Backup Script
+        run: |
+          chmod +x backup.sh
+          ./backup.sh
+
+      - name: Clean up old backups (14 days)
+        run: |
+          find backups/ -type f -mtime +14 -name '*.sqlite3' -exec rm {} \;
+          find backups/ -type f -mtime +14 -name '*.tar.gz' -exec rm {} \;

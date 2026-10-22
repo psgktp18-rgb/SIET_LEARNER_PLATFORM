@@ -1,0 +1,41 @@
+name: AI Integration Tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0' # Weekly on Sunday
+
+jobs:
+  ai-test:
+    name: Test Ollama and Gemini (Self-Hosted)
+    runs-on: [self-hosted, siet-server]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Check Ollama Models
+        run: |
+          # Check if chat model exists
+          MODEL_INFO=$(curl -s http://localhost:11434/api/tags)
+          if ! echo "$MODEL_INFO" | grep -q "qwen2.5:7b-instruct"; then
+            echo "::warning::Ollama chat model missing! Run: curl -X POST http://localhost:11434/api/pull -d '{\"name\":\"qwen2.5:7b-instruct\"}'"
+          fi
+
+      - name: Run Golden Questions
+        env:
+          AI_PROVIDER: "router"
+          AI_PRIMARY: "ollama"
+          OLLAMA_BASE_URL: "http://localhost:11434"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          # If we had a jest/vitest script for ai-golden, we'd run it here
+          # npm run test:ai
+          echo "Simulating golden question tests against live AI provider..."

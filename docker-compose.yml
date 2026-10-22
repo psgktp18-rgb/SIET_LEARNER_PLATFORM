@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://lecture_lens:password@postgres:5432/lecture_lens_prod
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # Ollama is not strictly required for the app to start, only for AI features
+    volumes:
+      - uploads_data:/app/public/uploads
+
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: lecture_lens
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: lecture_lens_prod
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lecture_lens"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: always
+    volumes:
+      - ollama_models:/root/.ollama
+    # Uncomment the following to enable NVIDIA GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  ollama-init:
+    image: curlimages/curl:latest
+    depends_on:
+      - ollama
+    restart: "no"
+    command: >
+      sh -c "
+      echo 'Waiting for Ollama API...' &&
+      while ! curl -s http://ollama:11434/api/tags > /dev/null; do sleep 5; done &&
+      echo 'Ollama API is up!' &&
+      echo 'Pulling chat model...' &&
+      curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"qwen2.5:7b-instruct\"}' &&
+      echo 'Pulling embed model...' &&
+      curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"nomic-embed-text\"}' &&
+      echo 'Models pulled successfully!'
+      "
+
+volumes:
+  db_data:
+  uploads_data:
+  ollama_models:

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      target: deps
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    command: npm run dev
+    env_file:
+      - .env
+
+  # In development, you might just use local SQLite and local host Ollama.
+  # So postgres and ollama are omitted here to keep it lightweight.

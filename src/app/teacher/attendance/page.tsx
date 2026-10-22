@@ -1,0 +1,57 @@
+import { prisma } from '@/lib/prisma';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Suspense } from 'react';
+import { getUser } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+
+async function DataList() {
+  const payload = await getUser();
+  if (!payload || payload.role !== 'TEACHER') return redirect('/login');
+  
+  const teacherId = payload.userId;
+
+  const items = await prisma.classroom.findMany({ where: { teacherId } });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Attendance Data</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {(!items || (Array.isArray(items) && items.length === 0)) ? (
+          <div className="py-8 text-center text-muted-foreground">No records found.</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Classroom</TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map(c => (<TableRow key={c.id}><TableCell className="font-bold">{c.name}</TableCell><TableCell>Track Attendance</TableCell><TableCell><Badge>Open</Badge></TableCell></TableRow>))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function Page() {
+  return (
+    <div className="space-y-6 p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Attendance</h1>
+      </div>
+      <Suspense fallback={<div className="h-64 animate-pulse rounded-lg bg-muted"></div>}>
+        <DataList />
+      </Suspense>
+    </div>
+  );
+}
+
+export const instant = false;
