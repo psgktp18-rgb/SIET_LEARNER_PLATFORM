@@ -28,6 +28,6 @@ if (!_env.success) {
 
 export const env = _env.data;
 
-if (env.AI_FALLBACK === 'gemini' && !env.GEMINI_API_KEY) {
+if (typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.VERCEL && env.AI_FALLBACK === 'gemini' && !env.GEMINI_API_KEY) {
   console.warn('⚠️ WARNING: AI_FALLBACK is set to "gemini" but GEMINI_API_KEY is missing. AI requests may fail.');
 }
