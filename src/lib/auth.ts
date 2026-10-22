@@ -60,5 +60,7 @@ export async function initRevokedUsers() {
   }
 }
 
-// Fire once immediately
-initRevokedUsers();
+// Note: We intentionally do NOT call initRevokedUsers() at module load.
+// On Vercel serverless, module-level DB calls fail on cold starts before
+// the DB connection is ready. The revokedUsers set starts empty (safe —
+// JWT verification still gates access). Admins can force re-fetch via API.
