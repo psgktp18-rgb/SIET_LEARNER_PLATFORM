@@ -33,8 +33,8 @@ export const POST = defineRoute(
     
     let createdCount = 0;
     let updatedCount = 0;
-    let errors: string[] = [];
-    let validRows = [];
+    const errors: string[] = [];
+    const validRows: { name: string; email: string; loginId: string }[] = [];
 
     for (let i = 1; i < lines.length; i++) {
        const row = lines[i].split(',').map(c => c.trim());

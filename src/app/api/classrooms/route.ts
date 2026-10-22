@@ -164,13 +164,16 @@ export async function POST(req: NextRequest) {
 
     let {
       subjectId,
-      subjectName,
-      subjectCode,
       departmentId,
       year,
       section,
       teacherId,
       name,
+    } = body;
+
+    const {
+      subjectName,
+      subjectCode,
       category,
       requiresApproval,
       bannerColor,

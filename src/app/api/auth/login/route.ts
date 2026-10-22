@@ -7,7 +7,6 @@ import { COOKIE_NAME, getCookieOptions } from '@/lib/auth/config';
 import { getHomeRoute } from '@/lib/routes';
 import { isStudentRolloutEnabled } from '@/lib/rollout';
 import { cookies } from 'next/headers';
-// @ts-ignore
 import { after } from 'next/server';
 import { logAudit } from '@/lib/audit'; // We assume this exists and doesn't throw
 

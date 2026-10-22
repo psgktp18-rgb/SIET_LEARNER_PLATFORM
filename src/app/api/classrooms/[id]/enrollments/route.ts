@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { mode } = body; // 'individual' | 'rule' | 'csv'
 
     let enrolledCount = 0;
-    let errors: string[] = [];
+    const errors: string[] = [];
 
     if (mode === 'individual') {
       const { studentIdentifier } = body; // loginId or id

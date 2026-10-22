@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { COOKIE_NAME } from '@/lib/auth/config';
-// @ts-ignore
 import { after } from 'next/server';
 import { logAudit } from '@/lib/audit';
 import { getUser } from '@/lib/auth';
