@@ -4,8 +4,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Suspense } from 'react';
 
-// This page queries the database — must be rendered at request time, not prerendered at build.
-export const dynamic = 'force-dynamic';
 
 async function DataList() {
   const items = await prisma.systemSetting.findFirst();
