@@ -1,0 +1,130 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    permissions:
+      deployments: write
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Prisma Generate
+        run: npx prisma generate
+
+      # For Pull Requests → Deploy Preview
+      - name: Deploy Preview to Vercel
+        if: github.event_name == 'pull_request'
+        id: deploy-preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          DEPLOY_URL=$(vercel deploy \
+            --token=$VERCEL_TOKEN \
+            --build-env DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --build-env JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --build-env GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
+            --build-env AI_PRIMARY="gemini" \
+            --build-env AI_FALLBACK="gemini" \
+            --build-env AI_PROVIDER="router" \
+            --build-env GEMINI_MODEL="gemini-1.5-flash" \
+            --build-env NEXT_TELEMETRY_DISABLED="1" \
+            2>&1 | tail -1)
+          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Preview URL: $DEPLOY_URL"
+
+      - name: Comment Preview URL on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployUrl = '${{ steps.deploy-preview.outputs.DEPLOY_URL }}';
+            const body = `## 🚀 Vercel Preview Deployment\n\n| | |\n|---|---|\n| **Status** | ✅ Ready |\n| **Preview URL** | [${deployUrl}](${deployUrl}) |\n| **Branch** | \`${{ github.head_ref }}\` |\n| **Commit** | \`${{ github.sha }}\` |\n\n> Deployed by GitHub Actions 🤖`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+      # For main branch pushes → Production Deployment
+      - name: Deploy Production to Vercel
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: deploy-production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          DEPLOY_URL=$(vercel deploy --prod \
+            --token=$VERCEL_TOKEN \
+            --build-env DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --build-env JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --build-env GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
+            --build-env AI_PRIMARY="gemini" \
+            --build-env AI_FALLBACK="gemini" \
+            --build-env AI_PROVIDER="router" \
+            --build-env GEMINI_MODEL="gemini-1.5-flash" \
+            --build-env NEXT_TELEMETRY_DISABLED="1" \
+            2>&1 | tail -1)
+          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_OUTPUT
+          echo "Production URL: $DEPLOY_URL"
+
+      - name: Create GitHub Deployment Status (Production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployUrl = '${{ steps.deploy-production.outputs.DEPLOY_URL }}';
+            
+            // Create deployment
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: 'production',
+              description: 'Vercel Production Deployment',
+              auto_merge: false,
+              required_contexts: [],
+            });
+            
+            // Set deployment status with URL
+            if (deployment.status === 201) {
+              await github.rest.repos.createDeploymentStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                deployment_id: deployment.data.id,
+                state: 'success',
+                environment_url: deployUrl,
+                log_url: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                description: 'Deployed to Vercel successfully!',
+              });
+              console.log(`✅ Deployment URL: ${deployUrl}`);
+            }

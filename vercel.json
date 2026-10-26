@@ -1,7 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "npm run build",
+  "buildCommand": "npx prisma generate && npm run build",
   "installCommand": "npm install",
-  "outputDirectory": ".next"
+  "env": {
+    "AI_PRIMARY": "gemini",
+    "AI_FALLBACK": "gemini",
+    "AI_PROVIDER": "router",
+    "GEMINI_MODEL": "gemini-1.5-flash",
+    "AI_TIMEOUT_MS": "30000",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "regions": ["sin1"]
 }

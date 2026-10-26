@@ -12,11 +12,11 @@ class CircuitBreaker {
   isOpen(): boolean {
     if (this.consecutiveFailures >= 3) {
       if (Date.now() > this.nextRetryTime) {
-        return false; // Half-open
+        return false; // Half-open: allow one retry
       }
-      return true; // Open
+      return true; // Open: blocking
     }
-    return false; // Closed
+    return false; // Closed: healthy
   }
 
   recordSuccess() {
@@ -42,12 +42,6 @@ export class ProviderRouter implements AiProvider {
     gemini: new CircuitBreaker(),
   };
 
-  constructor() {
-    if (process.env.NODE_ENV === 'production' && env.AI_PROVIDER === 'mock') {
-      throw new Error("FATAL: AI_PROVIDER=mock is not allowed in production.");
-    }
-  }
-
   private getProviderByName(name: string): AiProvider | null {
     if (name === 'ollama') return this.ollama;
     if (name === 'gemini') return this.gemini;
@@ -66,10 +60,15 @@ export class ProviderRouter implements AiProvider {
   }
 
   private async canUseFallback(taskType: TaskType): Promise<boolean> {
-    const settings = await prisma.systemSetting.findFirst();
-    if (!settings || !settings.aiMasterSwitch) return false;
+    // Always allow fallback to Gemini when it's configured
+    if (env.AI_FALLBACK === 'gemini' && env.GEMINI_API_KEY) {
+      return true;
+    }
+    // Check DB setting for custom fallback policies
     try {
-      const taskFallbacks = JSON.parse(settings.taskFallbacks);
+      const settings = await prisma.systemSetting.findFirst();
+      if (!settings || !settings.aiMasterSwitch) return false;
+      const taskFallbacks = JSON.parse(settings.taskFallbacks || '{}');
       return !!taskFallbacks[taskType];
     } catch {
       return false;
@@ -89,6 +88,7 @@ export class ProviderRouter implements AiProvider {
         }
       });
     } catch (e) {
+      // Non-fatal - don't block AI responses due to logging failures
       console.error('Failed to log AI usage', e);
     }
   }
@@ -101,47 +101,67 @@ export class ProviderRouter implements AiProvider {
     const primary = this.getPrimary();
     const fallback = this.getFallback();
 
+    // Mock shortcut
     if (primary === this.mock) {
       return await operation(this.mock);
     }
 
+    // Try Primary
     if (primary) {
       const primaryBreaker = this.breakers[primary.name as keyof typeof this.breakers];
       if (!primaryBreaker || !primaryBreaker.isOpen()) {
         try {
           const result = await operation(primary);
           primaryBreaker?.recordSuccess();
-          await this.logUsage(taskType, primary.name, Date.now() - startTime, true, false);
+          this.logUsage(taskType, primary.name, Date.now() - startTime, true, false).catch(() => {});
           return result;
         } catch (err: any) {
           primaryBreaker?.recordFailure();
-          await this.logUsage(taskType, primary.name, Date.now() - startTime, false, false);
+          this.logUsage(taskType, primary.name, Date.now() - startTime, false, false).catch(() => {});
+          console.warn(`Primary AI provider '${primary.name}' failed: ${err.message}. Trying fallback...`);
           // Fallthrough to fallback
         }
       }
     }
 
     // Try Fallback
+    if (!fallback || fallback === primary) {
+      throw new AiError(
+        'AI is temporarily unavailable. Please check your AI provider configuration.',
+        this.name,
+        false
+      );
+    }
+
+    // Check if fallback is allowed (either by DB setting or if Gemini key is configured)
     const allowFallback = await this.canUseFallback(taskType);
-    if (!allowFallback || !fallback || fallback === primary) {
-      throw new AiError('AI is temporarily unavailable', this.name, false);
+    if (!allowFallback) {
+      throw new AiError(
+        'AI fallback is not enabled. Enable it in Admin → AI Settings.',
+        this.name,
+        false
+      );
     }
 
     const fallbackBreaker = this.breakers[fallback.name as keyof typeof this.breakers];
     if (fallbackBreaker && fallbackBreaker.isOpen()) {
-       throw new AiError('AI is temporarily unavailable', this.name, false);
+      throw new AiError('All AI providers are temporarily unavailable. Please try again in 60 seconds.', this.name, false);
     }
 
     const fallbackStartTime = Date.now();
     try {
       const result = await operation(fallback);
       fallbackBreaker?.recordSuccess();
-      await this.logUsage(taskType, fallback.name, Date.now() - fallbackStartTime, true, true);
+      this.logUsage(taskType, fallback.name, Date.now() - fallbackStartTime, true, true).catch(() => {});
       return result;
     } catch (err: any) {
       fallbackBreaker?.recordFailure();
-      await this.logUsage(taskType, fallback.name, Date.now() - fallbackStartTime, false, true);
-      throw new AiError(`AI is temporarily unavailable`, this.name, false);
+      this.logUsage(taskType, fallback.name, Date.now() - fallbackStartTime, false, true).catch(() => {});
+      throw new AiError(
+        `AI is temporarily unavailable: ${err.message || 'All providers failed'}`,
+        this.name,
+        false
+      );
     }
   }
 

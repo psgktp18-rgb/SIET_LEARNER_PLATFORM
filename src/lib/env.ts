@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+// On Vercel, Ollama is not available - default to Gemini
+const isVercel = !!process.env.VERCEL;
+const defaultPrimary = isVercel ? 'gemini' : (process.env.AI_PRIMARY || 'ollama');
+const defaultFallback = isVercel ? 'gemini' : (process.env.AI_FALLBACK || 'gemini');
+
 const envSchema = z.object({
   DATABASE_URL: z.string().default(process.env.DATABASE_URL || 'postgresql://dummy:dummy@localhost:5432/dummy?schema=public'),
   JWT_SECRET: z.string().default(process.env.JWT_SECRET || 'supersecret_jwt_key_at_least_32_characters_long_for_dev'),
@@ -8,8 +13,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default((process.env.NODE_ENV as any) || 'development'),
   MAX_UPLOAD_MB: z.coerce.number().default(10),
   JITSI_DOMAIN: z.string().default('meet.jit.si'),
-  AI_PRIMARY: z.string().default(process.env.AI_PRIMARY || 'ollama'),
-  AI_FALLBACK: z.string().default(process.env.AI_FALLBACK || 'gemini'),
+  AI_PRIMARY: z.string().default(defaultPrimary),
+  AI_FALLBACK: z.string().default(defaultFallback),
   AI_PROVIDER: z.string().default(process.env.AI_PROVIDER || 'router'),
   OLLAMA_BASE_URL: z.string().default(process.env.OLLAMA_BASE_URL || 'http://localhost:11434'),
   OLLAMA_CHAT_MODEL: z.string().default(process.env.OLLAMA_CHAT_MODEL || 'qwen2.5:7b-instruct'),
@@ -28,6 +33,8 @@ if (!_env.success) {
 
 export const env = _env.data;
 
-if (typeof window === 'undefined' && process.env.NODE_ENV === 'production' && !process.env.VERCEL && env.AI_FALLBACK === 'gemini' && !env.GEMINI_API_KEY) {
-  console.warn('⚠️ WARNING: AI_FALLBACK is set to "gemini" but GEMINI_API_KEY is missing. AI requests may fail.');
+if (typeof window === 'undefined') {
+  if (!process.env.GEMINI_API_KEY) {
+    console.warn('⚠️ WARNING: GEMINI_API_KEY is not set. AI features will not work unless Ollama is running locally.');
+  }
 }

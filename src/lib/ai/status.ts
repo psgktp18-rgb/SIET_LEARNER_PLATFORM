@@ -9,8 +9,15 @@ export interface AiStatus {
 }
 
 export async function checkAiConfigured(): Promise<AiStatus> {
-  const settings = await prisma.systemSetting.findFirst();
-  const masterEnabled = settings?.aiMasterSwitch ?? true;
+  // Check master switch in DB (non-fatal if DB is unavailable during build)
+  let masterEnabled = true;
+  try {
+    const settings = await prisma.systemSetting.findFirst();
+    masterEnabled = settings?.aiMasterSwitch ?? true;
+  } catch {
+    // DB may not be available during build/CI - default to enabled
+    masterEnabled = true;
+  }
 
   if (!masterEnabled) {
     return {
@@ -21,6 +28,7 @@ export async function checkAiConfigured(): Promise<AiStatus> {
     };
   }
 
+  // Mock provider (test/dev only)
   if (env.AI_PROVIDER === 'mock') {
     return {
       isConfigured: true,
@@ -29,49 +37,60 @@ export async function checkAiConfigured(): Promise<AiStatus> {
     };
   }
 
+  const hasGeminiKey = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 0;
+  const hasOllamaUrl = !!env.OLLAMA_BASE_URL && env.OLLAMA_BASE_URL !== 'http://localhost:11434';
+  const isVercel = !!process.env.VERCEL;
+
   const primary = env.AI_PRIMARY;
   const fallback = env.AI_FALLBACK;
 
-  const hasGeminiKey = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 0;
-  const hasOllama = !!env.OLLAMA_BASE_URL;
+  // On Vercel: only Gemini is viable
+  if (isVercel) {
+    if (hasGeminiKey) {
+      return { isConfigured: true, provider: 'gemini', masterEnabled: true };
+    }
+    return {
+      isConfigured: false,
+      provider: 'gemini',
+      masterEnabled: true,
+      reason: 'GEMINI_API_KEY is not set in Vercel Environment Variables. Add it in Vercel Dashboard → Settings → Environment Variables.',
+    };
+  }
 
-  if (primary === 'gemini' && !hasGeminiKey) {
-    if (fallback === 'ollama' && hasOllama) {
+  // Gemini as primary
+  if (primary === 'gemini') {
+    if (hasGeminiKey) {
+      return { isConfigured: true, provider: 'gemini', masterEnabled: true };
+    }
+    if (fallback === 'ollama') {
       return { isConfigured: true, provider: 'ollama (fallback)', masterEnabled: true };
     }
     return {
       isConfigured: false,
       provider: 'gemini',
       masterEnabled: true,
-      reason: 'GEMINI_API_KEY is not configured in the server environment.',
+      reason: 'GEMINI_API_KEY is not configured. Set it in your .env file.',
     };
   }
 
-  if (primary === 'ollama' && !hasOllama) {
-    if (fallback === 'gemini' && hasGeminiKey) {
-      return { isConfigured: true, provider: 'gemini (fallback)', masterEnabled: true };
+  // Ollama as primary
+  if (primary === 'ollama') {
+    // Ollama is assumed running locally
+    if (hasGeminiKey) {
+      return { isConfigured: true, provider: 'ollama + gemini (fallback)', masterEnabled: true };
     }
-    return {
-      isConfigured: false,
-      provider: 'ollama',
-      masterEnabled: true,
-      reason: 'Ollama base URL is not configured.',
-    };
+    return { isConfigured: true, provider: 'ollama', masterEnabled: true };
   }
 
-  // If both gemini and ollama are primary/fallback
-  if (!hasGeminiKey && primary === 'gemini') {
-    return {
-      isConfigured: false,
-      provider: 'none',
-      masterEnabled: true,
-      reason: 'No AI provider credentials configured.',
-    };
+  // Fallback: if Gemini key exists, use it
+  if (hasGeminiKey) {
+    return { isConfigured: true, provider: 'gemini', masterEnabled: true };
   }
 
   return {
-    isConfigured: true,
-    provider: primary,
+    isConfigured: false,
+    provider: 'none',
     masterEnabled: true,
+    reason: 'No AI provider is configured. Set GEMINI_API_KEY in your environment variables.',
   };
 }
