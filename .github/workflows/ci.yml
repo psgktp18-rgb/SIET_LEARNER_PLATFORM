@@ -122,7 +122,7 @@ jobs:
         run: npm run build
 
       - name: Cache Build Artifacts
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .next
           key: ${{ runner.os }}-nextjs-${{ github.sha }}
