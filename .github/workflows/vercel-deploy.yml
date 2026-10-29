@@ -61,7 +61,7 @@ jobs:
 
       - name: Comment Preview URL on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const deployUrl = '${{ steps.deploy-preview.outputs.DEPLOY_URL }}';
@@ -99,7 +99,7 @@ jobs:
 
       - name: Create GitHub Deployment Status (Production)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const deployUrl = '${{ steps.deploy-production.outputs.DEPLOY_URL }}';
