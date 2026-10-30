@@ -1,6 +1,7 @@
 import { AiProvider, ChatOptions, AiError, TaskType } from './types';
 import { OllamaProvider } from './ollama';
 import { GeminiProvider } from './gemini';
+import { GroqProvider } from './groq';
 import { MockProvider } from './mock';
 import { env } from '../env';
 import { prisma } from '../prisma';
@@ -35,16 +36,19 @@ export class ProviderRouter implements AiProvider {
   name = 'router';
   private ollama = new OllamaProvider();
   private gemini = new GeminiProvider();
+  private groq = new GroqProvider();
   private mock = new MockProvider();
   
   private breakers = {
     ollama: new CircuitBreaker(),
     gemini: new CircuitBreaker(),
+    groq: new CircuitBreaker(),
   };
 
   private getProviderByName(name: string): AiProvider | null {
     if (name === 'ollama') return this.ollama;
     if (name === 'gemini') return this.gemini;
+    if (name === 'groq') return this.groq;
     if (name === 'mock') return this.mock;
     return null;
   }

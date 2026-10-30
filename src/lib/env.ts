@@ -21,6 +21,8 @@ const envSchema = z.object({
   OLLAMA_EMBED_MODEL: z.string().default(process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text'),
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default(process.env.GEMINI_MODEL || 'gemini-1.5-flash'),
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_MODEL: z.string().default(process.env.GROQ_MODEL || 'llama-3.1-70b-versatile'),
   AI_TIMEOUT_MS: z.coerce.number().default(30000),
 });
 
@@ -34,7 +36,7 @@ if (!_env.success) {
 export const env = _env.data;
 
 if (typeof window === 'undefined') {
-  if (!process.env.GEMINI_API_KEY) {
-    console.warn('⚠️ WARNING: GEMINI_API_KEY is not set. AI features will not work unless Ollama is running locally.');
+  if (!process.env.GEMINI_API_KEY && !process.env.GROQ_API_KEY) {
+    console.warn('⚠️ WARNING: Neither GEMINI_API_KEY nor GROQ_API_KEY is set. AI features will use mock mode.');
   }
 }
