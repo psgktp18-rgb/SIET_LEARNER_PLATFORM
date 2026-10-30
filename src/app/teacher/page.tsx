@@ -143,22 +143,22 @@ export default async function TeacherDashboard() {
 
         {/* Big Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button render={<Link href="/teacher/classrooms" className="gap-2" />}>
+          <Button nativeButton={false} render={<Link href="/teacher/classrooms" className="gap-2" />}>
             <PlusCircle className="h-4 w-4" />
             <span>Create Extra Class</span>
           </Button>
 
-          <Button variant="outline" render={<Link href="/teacher/classrooms" className="gap-2" />}>
+          <Button nativeButton={false} variant="outline" render={<Link href="/teacher/classrooms" className="gap-2" />}>
             <BookOpen className="h-4 w-4" />
             <span>Upload Notes</span>
           </Button>
 
-          <Button variant="outline" render={<Link href="/teacher/classrooms" className="gap-2" />}>
+          <Button nativeButton={false} variant="outline" render={<Link href="/teacher/classrooms" className="gap-2" />}>
             <FileText className="h-4 w-4" />
             <span>Create Assignment</span>
           </Button>
 
-          <Button variant="secondary" render={<Link href="/teacher/ai-studio" className="gap-2 bg-secondary text-primary font-bold hover:bg-secondary/90" />}>
+          <Button nativeButton={false} variant="secondary" render={<Link href="/teacher/ai-studio" className="gap-2 bg-secondary text-primary font-bold hover:bg-secondary/90" />}>
             <Sparkles className="h-4 w-4" />
             <span>Open AI Studio</span>
           </Button>
@@ -180,7 +180,7 @@ export default async function TeacherDashboard() {
                 You can create self-managed extra classes (remedial batches or clubs) right now, or request your official curriculum courses from your Admin / HOD.
               </p>
               <div className="flex flex-wrap gap-3 pt-2 justify-center md:justify-start">
-                <Button render={<Link href="/teacher/classrooms" className="gap-1.5" />}>
+                <Button nativeButton={false} render={<Link href="/teacher/classrooms" className="gap-1.5" />}>
                   <PlusCircle className="h-4 w-4" />
                   <span>Create an Extra Class</span>
                 </Button>

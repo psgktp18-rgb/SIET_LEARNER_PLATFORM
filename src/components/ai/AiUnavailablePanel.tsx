@@ -98,7 +98,7 @@ export function AiUnavailablePanel({
 
         <div className="pt-2">
           {isAdmin ? (
-            <Button render={<Link href="/admin/settings" className="gap-2 inline-flex items-center" />}>
+            <Button nativeButton={false} render={<Link href="/admin/settings" className="gap-2 inline-flex items-center" />}>
               <Settings className="h-4 w-4" />
               <span>Configure AI in System Settings</span>
             </Button>

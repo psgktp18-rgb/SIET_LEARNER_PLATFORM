@@ -98,11 +98,11 @@ export default async function HodDashboard() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button render={<Link href="/hod/classrooms" className="gap-1.5" />}>
+          <Button nativeButton={false} render={<Link href="/hod/classrooms" className="gap-1.5" />}>
             <BookOpen className="h-4 w-4" />
             <span>Department Classrooms</span>
           </Button>
-          <Button variant="outline" render={<Link href="/hod/teachers" className="gap-1.5" />}>
+          <Button nativeButton={false} variant="outline" render={<Link href="/hod/teachers" className="gap-1.5" />}>
             <Users className="h-4 w-4" />
             <span>Faculty Roster</span>
           </Button>
@@ -155,7 +155,7 @@ export default async function HodDashboard() {
             </p>
           </div>
 
-          <Button render={<Link href="/hod/ai-insights" className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-xs shrink-0" />}>
+          <Button nativeButton={false} render={<Link href="/hod/ai-insights" className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-xs shrink-0" />}>
             <Sparkles className="h-3.5 w-3.5 text-secondary" />
             <span>Generate Department Digest</span>
             <ArrowRight className="h-3.5 w-3.5" />

@@ -16,11 +16,13 @@ import {
   LogOut,
   Sparkles,
   Check,
+  UserCircle,
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -148,14 +150,16 @@ export function Header({ user }: HeaderProps) {
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-72 p-2">
-              <DropdownMenuLabel className="text-xs font-semibold flex items-center justify-between">
-                <span>Notifications</span>
-                {unreadCount > 0 && (
-                  <Badge variant="secondary" className="text-3xs bg-secondary text-primary font-bold">
-                    {unreadCount} New
-                  </Badge>
-                )}
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-xs font-semibold flex items-center justify-between">
+                  <span>Notifications</span>
+                  {unreadCount > 0 && (
+                    <Badge variant="secondary" className="text-3xs bg-secondary text-primary font-bold">
+                      {unreadCount} New
+                    </Badge>
+                  )}
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <div className="space-y-1 py-1">
                 {notifications.map((n) => (
@@ -219,23 +223,25 @@ export function Header({ user }: HeaderProps) {
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 p-2">
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-xs font-bold leading-none text-foreground">{user.name}</p>
-                  <p className="text-2xs leading-none text-muted-foreground font-mono">
-                    {user.loginId || user.email || user.role}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-xs font-bold leading-none text-foreground">{user.name}</p>
+                    <p className="text-2xs leading-none text-muted-foreground font-mono">
+                      {user.loginId || user.email || user.role}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href={`/${user.role.toLowerCase()}`} className="cursor-pointer text-xs flex items-center gap-2" />}>
+              <DropdownMenuItem render={<Link href={`/${user.isHod ? 'hod' : user.role.toLowerCase()}`} className="cursor-pointer text-xs flex items-center gap-2" />}>
                 <User className="h-3.5 w-3.5 text-primary" />
                 <span>My Dashboard</span>
               </DropdownMenuItem>
               {user.role === 'STUDENT' && (
-                <DropdownMenuItem render={<Link href="/student/ai-tutor" className="cursor-pointer text-xs flex items-center gap-2" />}>
-                  <Sparkles className="h-3.5 w-3.5 text-secondary" />
-                  <span>AI Tutor</span>
+                <DropdownMenuItem render={<Link href="/student/profile" className="cursor-pointer text-xs flex items-center gap-2" />}>
+                  <UserCircle className="h-3.5 w-3.5 text-primary" />
+                  <span>My Profile</span>
                 </DropdownMenuItem>
               )}
               {user.role === 'TEACHER' && (

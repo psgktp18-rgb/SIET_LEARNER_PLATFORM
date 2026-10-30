@@ -26,6 +26,7 @@ import {
   TrendingUp,
   Home,
   UserCircle,
+  LogOut,
 } from 'lucide-react';
 import { RouteItem } from '@/lib/routes';
 
@@ -147,15 +148,22 @@ export function Sidebar({ routes, role, user }: SidebarProps) {
             {/* Nav list */}
             {renderNavItems(true)}
 
-            {/* Bottom User Card */}
+            {/* Bottom User Card + Logout */}
             <div className="p-3 border-t bg-muted/30 flex items-center gap-3">
               <div className="h-8 w-8 rounded-full bg-primary text-secondary flex items-center justify-center font-bold text-xs shrink-0">
                 {user.name ? user.name.slice(0, 2).toUpperCase() : 'LL'}
               </div>
-              <div className="flex flex-col leading-tight truncate">
+              <div className="flex flex-col leading-tight truncate flex-1">
                 <span className="text-xs font-bold text-foreground truncate">{user.name}</span>
                 <span className="text-3xs text-muted-foreground uppercase">{user.isHod ? 'HOD' : user.role}</span>
               </div>
+              <a
+                href="/api/auth/logout"
+                title="Sign Out"
+                className="ml-auto p-1.5 rounded-md text-destructive hover:bg-destructive/10 transition-colors flex items-center justify-center shrink-0"
+              >
+                <LogOut className="h-4 w-4" />
+              </a>
             </div>
           </SheetContent>
         </Sheet>
@@ -200,19 +208,37 @@ export function Sidebar({ routes, role, user }: SidebarProps) {
         {/* 7 Hub Navigation Items */}
         {renderNavItems(false)}
 
-        {/* Bottom User Profile Badge with Real Name */}
+        {/* Bottom User Profile Badge with Logout */}
         <div className="p-3 border-t bg-muted/10 mt-auto">
           <div className={cn('flex items-center gap-2.5', collapsed && 'justify-center')}>
             <div className="h-7 w-7 rounded-full bg-primary text-secondary font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
               {user.name ? user.name.slice(0, 2).toUpperCase() : 'LL'}
             </div>
             {!collapsed && (
-              <div className="flex flex-col leading-none overflow-hidden">
-                <span className="text-xs font-bold text-foreground truncate">{user.name}</span>
-                <span className="text-3xs text-muted-foreground uppercase mt-0.5">
-                  {user.isHod ? 'HOD' : user.role}
-                </span>
-              </div>
+              <>
+                <div className="flex flex-col leading-none overflow-hidden flex-1">
+                  <span className="text-xs font-bold text-foreground truncate">{user.name}</span>
+                  <span className="text-3xs text-muted-foreground uppercase mt-0.5">
+                    {user.isHod ? 'HOD' : user.role}
+                  </span>
+                </div>
+                <a
+                  href="/api/auth/logout"
+                  title="Sign Out"
+                  className="p-1.5 rounded-md text-destructive hover:bg-destructive/10 transition-colors flex items-center justify-center shrink-0"
+                >
+                  <LogOut className="h-4 w-4" />
+                </a>
+              </>
+            )}
+            {collapsed && (
+              <a
+                href="/api/auth/logout"
+                title="Sign Out"
+                className="p-1.5 rounded-md text-destructive hover:bg-destructive/10 transition-colors flex items-center justify-center"
+              >
+                <LogOut className="h-4 w-4" />
+              </a>
             )}
           </div>
         </div>

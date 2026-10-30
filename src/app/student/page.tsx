@@ -180,7 +180,7 @@ export default async function StudentDashboard() {
                 </div>
               </div>
               <div className="pt-4 mt-4 border-t">
-                <Button render={<Link href="/student/ai-tutor" className="w-full text-xs font-bold justify-between" />}>
+                <Button nativeButton={false} render={<Link href="/student/ai-tutor" className="w-full text-xs font-bold justify-between" />}>
                   <span>Start AI Tutor Session</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -200,7 +200,7 @@ export default async function StudentDashboard() {
                 </div>
               </div>
               <div className="pt-4 mt-4 border-t">
-                <Button variant="outline" render={<Link href="/student/study" className="w-full text-xs font-bold justify-between" />}>
+                <Button nativeButton={false} variant="outline" render={<Link href="/student/study" className="w-full text-xs font-bold justify-between" />}>
                   <span>Open Study Space</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
